@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace HomeApplianceRepairCenter
@@ -10,6 +10,9 @@ namespace HomeApplianceRepairCenter
         UnderRepair,
         Repaired
     }
+
+    // ===== 4. التفويض (Delegate): شكل الدالة اللي بتستقبل إشعار تغيّر الحالة =====
+    public delegate void StatusChangedHandler(Device device, RepairStatus oldStatus, RepairStatus newStatus);
 
     // ===================== 1. التجريد (Abstraction) =====================
 
@@ -37,14 +40,35 @@ namespace HomeApplianceRepairCenter
             _status = RepairStatus.Received;
         }
 
-        public string SerialNumber => _serialNumber;//خاصية عامة محمية للقراءة فقط
+        public string SerialNumber => _serialNumber;
 
-        public string Name => _name;
+        public string Name
+        {
+            get => _name;
+            set => _name = value;
+        }
 
+        // ===== 4. تعديل: الخاصية Status صارت تطلق الحدث عند التغيير =====
         public RepairStatus Status
         {
             get => _status;
-            set => _status = value;
+            set
+            {
+                if (_status == value) return; // لا تغيير، لا إشعار
+
+                RepairStatus oldStatus = _status;
+                _status = value;
+                OnStatusChanged(oldStatus, _status);
+            }
+        }
+
+        // ===== 4. الحدث (Event) =====
+        public event StatusChangedHandler StatusChanged;
+
+        // ===== 4. إطلاق الحدث للمشتركين =====
+        protected virtual void OnStatusChanged(RepairStatus oldStatus, RepairStatus newStatus)
+        {
+            StatusChanged?.Invoke(this, oldStatus, newStatus);
         }
 
         // دالة حساب التكلفة 
@@ -70,8 +94,6 @@ namespace HomeApplianceRepairCenter
             _needsGasRefill = needsGasRefill;
             _compressorFailure = compressorFailure;
         }
-        public bool NeedsGasRefill => _needsGasRefill;
-        public bool compressorFailure => _compressorFailure;
 
         public override decimal CalculateRepairCost()
         {
@@ -94,12 +116,10 @@ namespace HomeApplianceRepairCenter
             _motorReplacement = motorReplacement;
             _laborHours = laborHours;
         }
-        public bool MotorReplacement => _motorReplacement;
-        public int LaborHours => _laborHours;
 
         public override decimal CalculateRepairCost()
         {
-            decimal cost = _laborHours * 15000m; 
+            decimal cost = _laborHours * 15000m;
             if (_motorReplacement) cost += 90000;
             return cost;
         }
@@ -117,9 +137,6 @@ namespace HomeApplianceRepairCenter
             _pipeLengthMeters = pipeLengthMeters;
             _needsCleaning = needsCleaning;
         }
-        public int PipelengthMeters => _pipeLengthMeters;
-        public bool NeedsCleaning => _needsCleaning;
-
         public override decimal CalculateRepairCost()
         {
             decimal cost = 30000 + (_pipeLengthMeters * 8000m);
@@ -128,7 +145,7 @@ namespace HomeApplianceRepairCenter
         }
     }
 
-    
+
     public class RepairCenter
     {
         private readonly List<Device> _devices = new List<Device>();
@@ -136,6 +153,7 @@ namespace HomeApplianceRepairCenter
         public void AddDevice(Device device)
         {
             _devices.Add(device);
+            SubscribeToDevice(device); // ===== 4. الاشتراك بحدث الجهاز =====
         }
 
         // 
@@ -157,6 +175,23 @@ namespace HomeApplianceRepairCenter
             }
             return total;
         }
+
+        // ===== 4. الاشتراك بالحدث =====
+        private void SubscribeToDevice(Device device)
+        {
+            device.StatusChanged += OnDeviceStatusChanged;
+        }
+
+        // ===== 4. تُنفذ تلقائياً عند تغيّر حالة أي جهاز =====
+        private void OnDeviceStatusChanged(Device device, RepairStatus oldStatus, RepairStatus newStatus)
+        {
+            Console.WriteLine($"[Notification] {device.Name} ({device.SerialNumber}): {oldStatus} -> {newStatus}");
+
+            if (newStatus == RepairStatus.Repaired)
+            {
+                Console.WriteLine($"   >> {device.Name} is ready for pickup. Repair cost: {device.CalculateRepairCost():N0}");
+            }
+        }
     }
 
     internal class Program
@@ -165,15 +200,26 @@ namespace HomeApplianceRepairCenter
         {
             var center = new RepairCenter();
 
-            center.AddDevice(new Refrigerator("FR-1001", "Samsung Fridge", true, false));
-            center.AddDevice(new WashingMachine("WM-2002", "LG Washer", true, 2));
-            center.AddDevice(new AirConditioner("AC-3003", "Gree Split AC", 5, true));
+            var fridge = new Refrigerator("FR-1001", "Samsung Fridge", true, false);
+            var washer = new WashingMachine("WM-2002", "LG Washer", true, 2);
+            var ac = new AirConditioner("AC-3003", "Gree Split AC", 5, true);
+
+            center.AddDevice(fridge);
+            center.AddDevice(washer);
+            center.AddDevice(ac);
 
             Console.WriteLine("===== Devices in Repair Center =====");
             center.ShowAllDevices();
 
             Console.WriteLine();
             Console.WriteLine($"Total repair cost: {center.CalculateTotalCost():N0}");
+
+            // ===== 4. تجربة الأحداث: تغيير الحالات =====
+            Console.WriteLine();
+            Console.WriteLine("===== Updating statuses =====");
+            fridge.Status = RepairStatus.UnderRepair;
+            fridge.Status = RepairStatus.Repaired;
+            washer.Status = RepairStatus.UnderRepair;
 
             Console.ReadKey();
         }
