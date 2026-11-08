@@ -37,13 +37,9 @@ namespace HomeApplianceRepairCenter
             _status = RepairStatus.Received;
         }
 
-        public string SerialNumber => _serialNumber;
+        public string SerialNumber => _serialNumber;//خاصية عامة محمية للقراءة فقط
 
-        public string Name
-        {
-            get => _name;
-            set => _name = value;
-        }
+        public string Name => _name;
 
         public RepairStatus Status
         {
@@ -74,6 +70,8 @@ namespace HomeApplianceRepairCenter
             _needsGasRefill = needsGasRefill;
             _compressorFailure = compressorFailure;
         }
+        public bool NeedsGasRefill => _needsGasRefill;
+        public bool compressorFailure => _compressorFailure;
 
         public override decimal CalculateRepairCost()
         {
@@ -96,6 +94,8 @@ namespace HomeApplianceRepairCenter
             _motorReplacement = motorReplacement;
             _laborHours = laborHours;
         }
+        public bool MotorReplacement => _motorReplacement;
+        public int LaborHours => _laborHours;
 
         public override decimal CalculateRepairCost()
         {
@@ -117,6 +117,8 @@ namespace HomeApplianceRepairCenter
             _pipeLengthMeters = pipeLengthMeters;
             _needsCleaning = needsCleaning;
         }
+        public int PipelengthMeters => _pipeLengthMeters;
+        public bool NeedsCleaning => _needsCleaning;
 
         public override decimal CalculateRepairCost()
         {
