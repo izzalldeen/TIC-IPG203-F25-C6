@@ -225,3 +225,124 @@ namespace HomeApplianceRepairCenter
         }
     }
 }
+namespace ApplianceRepairCenter
+{
+    public enum ApplianceStatus
+    {
+        Registered,
+        Received,
+        UnderRepair,
+        Repaired,
+        Delivered
+    }
+
+    public static class InputValidator
+    {
+        public static int MinSerialNumberLength = 6;
+        public static int MaxSerialNumberLength = 20;
+
+        private static readonly Regex s_serialNumberPattern =
+            new Regex(@"^[A-Z0-9]+(-[A-Z0-9]+)*$", RegexOptions.CultureInvariant);
+
+        public static bool IsValidSerialNumber(string? serialNumber)
+        {
+            return serialNumber!= null
+                && serialNumber.Length >= MinSerialNumberLength
+                && serialNumber.Length <= MaxSerialNumberLength
+                && s_serialNumberPattern.IsMatch(serialNumber);
+        }
+    }
+
+    public class RepairCenter
+    {
+        public string CenterName { get; private set; }
+
+        private static readonly Dictionary<ApplianceStatus, int> s_statusCounts =
+            Enum.GetValues<ApplianceStatus>().ToDictionary(status => status, _ => 0);
+
+        public RepairCenter(string name)
+        {
+            CenterName = name;
+        }
+
+        public static int TotalRegistered
+        {
+            get { return s_statusCounts.Values.Sum(); }
+        }
+
+        public static int UnderRepairCount
+        {
+            get { return CountByStatus(ApplianceStatus.UnderRepair); }
+        }
+
+        public static int CountByStatus(ApplianceStatus status)
+        {
+            return s_statusCounts[status];
+        }
+
+        public void Register(string serialNumber)
+        {
+            if (!InputValidator.IsValidSerialNumber(serialNumber))
+            {
+                Console.WriteLine($"خطأ: الرقم التسلسلي '{serialNumber}' غير صالح.");
+                return;
+            }
+
+            s_statusCounts[ApplianceStatus.Registered]++;
+            Console.WriteLine($"تم تسجيل الجهاز {serialNumber} في مركز {CenterName}.");
+
+            HandleApplianceStatusChanged();
+        }
+
+        public void ChangeStatus(ApplianceStatus oldStatus, ApplianceStatus newStatus)
+        {
+            if (s_statusCounts[oldStatus] > 0)
+            {
+                s_statusCounts[oldStatus]--;
+                s_statusCounts[newStatus]++;
+                Console.WriteLine($"تغيرت حالة جهاز من {oldStatus} إلى {newStatus} في مركز {CenterName}.");
+
+                HandleApplianceStatusChanged();
+            }
+        }
+
+        private void HandleApplianceStatusChanged()
+        {
+            Console.WriteLine("====================================================================");
+            Console.WriteLine($"{CenterName}");
+            Console.WriteLine($"Registered: {CountByStatus(ApplianceStatus.Registered)} | " +
+                              $"Received: {CountByStatus(ApplianceStatus.Received)} | " +
+                              $"UnderRepair: {CountByStatus(ApplianceStatus.UnderRepair)} | " +
+                              $"Repaired: {CountByStatus(ApplianceStatus.Repaired)} | " +
+                              $"Delivered: {CountByStatus(ApplianceStatus.Delivered)}");
+            Console.WriteLine("====================================================================\n");
+        }
+
+        public static double CalculateTotalCost()
+        {
+            return 0.0;
+        }
+    }
+
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Console.WriteLine("--- بدء سيناريو التجربة (Demo Scenario) ---\n");
+
+            RepairCenter center1 = new RepairCenter("Damascus Home Appliance Repair Center");
+            RepairCenter center2 = new RepairCenter("Aleppo Home Appliance Repair Center"); center1.Register("RF-2024-0001");
+            center1.Register("TV-2024-0002");
+            center2.Register("WM-2024-0003");
+            center1.Register("123");
+
+            center1.ChangeStatus(ApplianceStatus.Registered, ApplianceStatus.Received);
+            center2.ChangeStatus(ApplianceStatus.Registered, ApplianceStatus.UnderRepair);
+
+            Console.WriteLine($"إجمالي الأجهزة المسجلة في المؤسسة كاملة: {RepairCenter.TotalRegistered}");
+            Console.WriteLine($"إجمالي الأجهزة تحت الصيانة حالياً: {RepairCenter.UnderRepairCount}");
+
+            Console.ReadLine();
+        }
+    }
+}
