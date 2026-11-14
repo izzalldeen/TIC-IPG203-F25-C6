@@ -1,7 +1,7 @@
 using System;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
-using system.linq;
+using System.linq;
 namespace HomeApplianceRepairCenter
 {
     // تمثل حالة الجهاز 
