@@ -1,7 +1,7 @@
 using System;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
-
+using system.linq;
 namespace HomeApplianceRepairCenter
 {
     // تمثل حالة الجهاز 
@@ -33,7 +33,7 @@ namespace HomeApplianceRepairCenter
     //  تعريف التفويض الخاص بتغيير الحالة
     public delegate void StatusChangedHandler(Device device, RepairStatus oldStatus, RepairStatus newStatus);
 
-    // ===================== 1. التجريد (Abstraction) =====================
+                         //          1   -التجريد-
 
     // تعريف الانترفيس تمثل العلميات المشتركة 
     public interface IDevice
@@ -102,7 +102,7 @@ namespace HomeApplianceRepairCenter
         }
     }
 
-    // ============== 2. الوراثة وتعدد الأشكال (Inheritance & Polymorphism) ==============
+    //                         - 2. الوراثة وتعدد الأشكال (Inheritance & Polymorphism) -
 
     // الثلاجة 
     public class Refrigerator : Device
@@ -242,10 +242,9 @@ namespace HomeApplianceRepairCenter
             center.ShowAllDevices();
 
             Console.WriteLine();
-            Console.WriteLine($"Total registered devices: {RepairCenter.TotalRegistered}");
             Console.WriteLine($"Total repair cost: {center.CalculateTotalCost():N0}");
 
-            // ===== 4. تجربة الأحداث: تغيير الحالات =====
+            //                 4 تجربة تغير حالات الأجهزة  
             Console.WriteLine();
             Console.WriteLine("===== Updating statuses =====");
             fridge.Status = RepairStatus.UnderRepair;
