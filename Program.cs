@@ -12,13 +12,13 @@ namespace HomeApplianceRepairCenter
         Repaired
     }
 
-    // ============== 5. الفئات والأعضاء الثابتة (Static Classes & Members) ==============
+    // كلاس التحقق من صحة المداخلات   
     public static class InputValidator
     {
         public static int MinSerialNumberLength = 6;
         public static int MaxSerialNumberLength = 20;
 
-        private static readonly Regex s_serialNumberPattern =
+        private static readonly Regex _serialNumberPattern =
             new Regex(@"^[A-Z0-9]+(-[A-Z0-9]+)*$", RegexOptions.CultureInvariant);
 
         public static bool IsValidSerialNumber(string serialNumber)
@@ -26,11 +26,11 @@ namespace HomeApplianceRepairCenter
             return serialNumber != null
                 && serialNumber.Length >= MinSerialNumberLength
                 && serialNumber.Length <= MaxSerialNumberLength
-                && s_serialNumberPattern.IsMatch(serialNumber);
+                && _serialNumberPattern.IsMatch(serialNumber);
         }
     }
 
-    // ===== 4. التفويض (Delegate): شكل الدالة اللي بتستقبل إشعار تغيّر الحالة =====
+    //  تعريف التفويض الخاص بتغيير الحالة
     public delegate void StatusChangedHandler(Device device, RepairStatus oldStatus, RepairStatus newStatus);
 
     // ===================== 1. التجريد (Abstraction) =====================
@@ -70,7 +70,7 @@ namespace HomeApplianceRepairCenter
             set => _name = value;
         }
 
-        // ===== 4. تعديل: الخاصية Status صارت تطلق الحدث عند التغيير =====
+       //    خاصية الحالة تطلق الحدث لما تتغير
         public RepairStatus Status
         {
             get => _status;
@@ -84,10 +84,10 @@ namespace HomeApplianceRepairCenter
             }
         }
 
-        // ===== 4. الحدث (Event) =====
+        //      حدث تغيير الحالة 
         public event StatusChangedHandler StatusChanged;
 
-        // ===== 4. إطلاق الحدث للمشتركين =====
+        //     دالة إطلاق الحدث      
         protected virtual void OnStatusChanged(RepairStatus oldStatus, RepairStatus newStatus)
         {
             StatusChanged?.Invoke(this, oldStatus, newStatus);
@@ -172,18 +172,21 @@ namespace HomeApplianceRepairCenter
     {
         private readonly List<Device> _devices = new List<Device>();
 
-        // ===== 5. خاصية ثابتة لحساب إجمالي الأجهزة المسجلة =====
-        private static int _totalRegistered = 0;
-        public static int TotalRegistered => _totalRegistered;
+        // قائمة ثابتة بتجمع كل الأجهزة بكل أفرع المركز
+        private static readonly List<Device> _allInstitutionDevices = new List<Device>();
+
+        // خصائص ثابتة للإحصائيات العامة
+        public static int TotalRegistered => _allInstitutionDevices.Count;
+        public static int UnderRepairCount => _allInstitutionDevices.Count(d => d.Status == RepairStatus.UnderRepair);
 
         public void AddDevice(Device device)
         {
             _devices.Add(device);
-            _totalRegistered++;
-            SubscribeToDevice(device); // ===== 4. الاشتراك بحدث الجهاز =====
+            _allInstitutionDevices.Add(device); // نضيف الجهاز للقائمة العامة كمان
+            SubscribeToDevice(device);
         }
 
-        // 
+        // عرض كل الأجهزة الموجودة بالمركز
         public void ShowAllDevices()
         {
             foreach (Device device in _devices)
@@ -192,7 +195,7 @@ namespace HomeApplianceRepairCenter
             }
         }
 
-        // حساب التكلفة بغض النطر عن الجهاز 
+        // حساب التكلفة الإجمالية لكل الأجهزة
         public decimal CalculateTotalCost()
         {
             decimal total = 0;
@@ -203,13 +206,13 @@ namespace HomeApplianceRepairCenter
             return total;
         }
 
-        // ===== 4. الاشتراك بالحدث =====
+        // ربط الحدث مع الدالة اللي رح تستقبل الإشعار
         private void SubscribeToDevice(Device device)
         {
             device.StatusChanged += OnDeviceStatusChanged;
         }
 
-        // ===== 4. تُنفذ تلقائياً عند تغيّر حالة أي جهاز =====
+        // هي الدالة بتشتغل لحالها بس تتغير حالة أي جهاز
         private void OnDeviceStatusChanged(Device device, RepairStatus oldStatus, RepairStatus newStatus)
         {
             Console.WriteLine($"[Notification] {device.Name} ({device.SerialNumber}): {oldStatus} -> {newStatus}");
@@ -248,7 +251,11 @@ namespace HomeApplianceRepairCenter
             fridge.Status = RepairStatus.UnderRepair;
             fridge.Status = RepairStatus.Repaired;
             washer.Status = RepairStatus.UnderRepair;
-
+            // طباعة الإحصائيات العامة للمركز
+            Console.WriteLine();
+            Console.WriteLine("===== Static Statistics =====");
+            Console.WriteLine($"Total registered devices: {RepairCenter.TotalRegistered}");
+            Console.WriteLine($"Devices currently under repair: {RepairCenter.UnderRepairCount}");
             Console.ReadKey();
         }
     }
