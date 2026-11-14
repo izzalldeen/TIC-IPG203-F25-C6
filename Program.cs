@@ -1,7 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
 
 namespace HomeApplianceRepairCenter
 {
@@ -13,10 +12,7 @@ namespace HomeApplianceRepairCenter
         Repaired
     }
 
-    // ===== 4. التفويض (Delegate): شكل الدالة اللي بتستقبل إشعار تغيّر الحالة =====
-    public delegate void StatusChangedHandler(Device device, RepairStatus oldStatus, RepairStatus newStatus);
-
-    // ===================== 5. الفئات الثابتة للتحقق من البيانات (Static Class) =====================
+    // ============== 5. الفئات والأعضاء الثابتة (Static Classes & Members) ==============
     public static class InputValidator
     {
         public static int MinSerialNumberLength = 6;
@@ -25,7 +21,7 @@ namespace HomeApplianceRepairCenter
         private static readonly Regex s_serialNumberPattern =
             new Regex(@"^[A-Z0-9]+(-[A-Z0-9]+)*$", RegexOptions.CultureInvariant);
 
-        public static bool IsValidSerialNumber(string? serialNumber)
+        public static bool IsValidSerialNumber(string serialNumber)
         {
             return serialNumber != null
                 && serialNumber.Length >= MinSerialNumberLength
@@ -34,7 +30,12 @@ namespace HomeApplianceRepairCenter
         }
     }
 
+    // ===== 4. التفويض (Delegate): شكل الدالة اللي بتستقبل إشعار تغيّر الحالة =====
+    public delegate void StatusChangedHandler(Device device, RepairStatus oldStatus, RepairStatus newStatus);
+
     // ===================== 1. التجريد (Abstraction) =====================
+
+    // تعريف الانترفيس تمثل العلميات المشتركة 
     public interface IDevice
     {
         string SerialNumber { get; }
@@ -54,9 +55,7 @@ namespace HomeApplianceRepairCenter
         protected Device(string serialNumber, string name)
         {
             if (!InputValidator.IsValidSerialNumber(serialNumber))
-            {
-                throw new ArgumentException($"الرقم التسلسلي '{serialNumber}' غير صالح.");
-            }
+                throw new ArgumentException("الرقم التسلسلي غير صالح.");
 
             _serialNumber = serialNumber;
             _name = name;
@@ -71,7 +70,7 @@ namespace HomeApplianceRepairCenter
             set => _name = value;
         }
 
-        // ===== 4. الخاصية Status تطلق الحدث عند التغيير =====
+        // ===== 4. تعديل: الخاصية Status صارت تطلق الحدث عند التغيير =====
         public RepairStatus Status
         {
             get => _status;
@@ -86,7 +85,7 @@ namespace HomeApplianceRepairCenter
         }
 
         // ===== 4. الحدث (Event) =====
-        public event StatusChangedHandler? StatusChanged;
+        public event StatusChangedHandler StatusChanged;
 
         // ===== 4. إطلاق الحدث للمشتركين =====
         protected virtual void OnStatusChanged(RepairStatus oldStatus, RepairStatus newStatus)
@@ -94,7 +93,7 @@ namespace HomeApplianceRepairCenter
             StatusChanged?.Invoke(this, oldStatus, newStatus);
         }
 
-        // دالة حساب التكلفة المجردة
+        // دالة حساب التكلفة 
         public abstract decimal CalculateRepairCost();
 
         public virtual void ShowInfo()
@@ -160,7 +159,6 @@ namespace HomeApplianceRepairCenter
             _pipeLengthMeters = pipeLengthMeters;
             _needsCleaning = needsCleaning;
         }
-
         public override decimal CalculateRepairCost()
         {
             decimal cost = 30000 + (_pipeLengthMeters * 8000m);
@@ -169,23 +167,23 @@ namespace HomeApplianceRepairCenter
         }
     }
 
-    // ===================== مركز الصيانة + الأعضاء الثابتة (Static Members) =====================
+
     public class RepairCenter
     {
         private readonly List<Device> _devices = new List<Device>();
-        private static readonly List<Device> _allInstitutionDevices = new List<Device>();
 
-        // ===== 5. خصائص ثابتة لحساب الإحصائيات على مستوى المؤسسة =====
-        public static int TotalRegistered => _allInstitutionDevices.Count;
-        public static int UnderRepairCount => _allInstitutionDevices.Count(d => d.Status == RepairStatus.UnderRepair);
+        // ===== 5. خاصية ثابتة لحساب إجمالي الأجهزة المسجلة =====
+        private static int _totalRegistered = 0;
+        public static int TotalRegistered => _totalRegistered;
 
         public void AddDevice(Device device)
         {
             _devices.Add(device);
-            _allInstitutionDevices.Add(device);
+            _totalRegistered++;
             SubscribeToDevice(device); // ===== 4. الاشتراك بحدث الجهاز =====
         }
 
+        // 
         public void ShowAllDevices()
         {
             foreach (Device device in _devices)
@@ -194,7 +192,7 @@ namespace HomeApplianceRepairCenter
             }
         }
 
-        // حساب التكلفة الإجمالية باستخدام تعدد الأشكال
+        // حساب التكلفة بغض النطر عن الجهاز 
         public decimal CalculateTotalCost()
         {
             decimal total = 0;
@@ -241,6 +239,7 @@ namespace HomeApplianceRepairCenter
             center.ShowAllDevices();
 
             Console.WriteLine();
+            Console.WriteLine($"Total registered devices: {RepairCenter.TotalRegistered}");
             Console.WriteLine($"Total repair cost: {center.CalculateTotalCost():N0}");
 
             // ===== 4. تجربة الأحداث: تغيير الحالات =====
@@ -249,12 +248,6 @@ namespace HomeApplianceRepairCenter
             fridge.Status = RepairStatus.UnderRepair;
             fridge.Status = RepairStatus.Repaired;
             washer.Status = RepairStatus.UnderRepair;
-
-            // ===== 5. عرض الإحصائيات من الخصائص الثابتة =====
-            Console.WriteLine();
-            Console.WriteLine("===== Static Statistics =====");
-            Console.WriteLine($"Total registered devices: {RepairCenter.TotalRegistered}");
-            Console.WriteLine($"Devices currently under repair: {RepairCenter.UnderRepairCount}");
 
             Console.ReadKey();
         }
